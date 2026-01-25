@@ -3,6 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667EEA">
+    <meta name="description" content="Juego del Impostor - Encuentra al impostor entre los jugadores">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="El Impostor">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>👤</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>👤</text></svg>">
     <title>El Impostor - Juego</title>
     <link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -180,6 +188,17 @@
         .btn-next-player:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(255, 107, 107, 0.6);
+        }
+
+        .btn-next-player:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-next-player:disabled:hover {
+            transform: none;
+            box-shadow: 0 6px 25px rgba(255, 107, 107, 0.4);
         }
 
         .btn-secondary {
@@ -575,7 +594,7 @@
                     <div class="reveal-content" id="revealContent"></div>
                 </div>
 
-                <button class="btn btn-next-player" onclick="nextPlayer()">
+                <button class="btn btn-next-player" id="nextPlayerBtn" onclick="nextPlayer()" disabled>
                     SIGUIENTE JUGADOR →
                 </button>
             </div>
@@ -772,6 +791,7 @@
             }
             
             document.getElementById('curtain').classList.remove('open');
+            document.getElementById('nextPlayerBtn').disabled = true;
             gameState.curtainOpen = false;
             showScreen('revealScreen');
         }
@@ -779,10 +799,14 @@
         function toggleCurtain() {
             gameState.curtainOpen = !gameState.curtainOpen;
             const curtain = document.getElementById('curtain');
+            const nextBtn = document.getElementById('nextPlayerBtn');
+            
             if (gameState.curtainOpen) {
                 curtain.classList.add('open');
+                nextBtn.disabled = false;
             } else {
                 curtain.classList.remove('open');
+                nextBtn.disabled = true;
             }
         }
 
@@ -796,14 +820,22 @@
         }
 
         function nextPlayer() {
+            // Cerrar la cortina primero
+            gameState.curtainOpen = false;
+            document.getElementById('curtain').classList.remove('open');
+            
             const orderedPlayers = getOrderedPlayers();
             const currentOrder = orderedPlayers.findIndex(p => p.originalIndex === gameState.currentPlayerIndex);
             
             if (currentOrder < orderedPlayers.length - 1) {
-                gameState.currentPlayerIndex = orderedPlayers[currentOrder + 1].originalIndex;
-                setTimeout(() => showRevealScreen(), 500);
+                setTimeout(() => {
+                    gameState.currentPlayerIndex = orderedPlayers[currentOrder + 1].originalIndex;
+                    showRevealScreen();
+                }, 500);
             } else {
-                showVotingScreen();
+                setTimeout(() => {
+                    showVotingScreen();
+                }, 500);
             }
         }
 
@@ -856,6 +888,32 @@
             gameState.curtainOpen = false;
             showScreen('menuScreen');
         }
+
+        // Registrar Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('Service Worker registrado'))
+                    .catch(err => console.log('Error al registrar Service Worker:', err));
+            });
+        }
+
+        // Mostrar prompt de instalación
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Mostrar un mensaje al usuario después de 3 segundos
+            setTimeout(() => {
+                if (deferredPrompt && window.confirm('¿Querés instalar El Impostor como aplicación en tu dispositivo?')) {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        deferredPrompt = null;
+                    });
+                }
+            }, 3000);
+        });
     </script>
 </body>
 </html>
