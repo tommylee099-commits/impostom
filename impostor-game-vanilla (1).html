@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667EEA">
+    <meta name="description" content="Juego del Impostor - Encuentra al impostor entre los jugadores">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="El Impostor">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>👤</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>👤</text></svg>">
+    <title>El Impostor - Juego</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-primary: #FF4757;
+            --color-secondary: #2ED573;
+            --color-dark: #1E272E;
+            --color-light: #F1F2F6;
+            --color-accent: #FFA502;
+            --color-impostor: #FF4757;
+            --color-inocente: #2ED573;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            top: -50%;
+            left: -50%;
+            animation: drift 20s linear infinite;
+        }
+
+        @keyframes drift {
+            to {
+                transform: translate(30px, 30px);
+            }
+        }
+
+        .header h1 {
+            font-family: 'Bowlby One', cursive;
+            color: white;
+            font-size: 2.5em;
+            text-shadow: 3px 3px 0 rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 1;
+            letter-spacing: 2px;
+        }
+
+        .content {
+            padding: 30px 20px;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .menu-option {
+            background: var(--color-light);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .menu-option:hover {
+            transform: translateX(5px);
+            border-color: var(--color-primary);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .menu-option label {
+            display: block;
+            font-weight: 600;
+            color: var(--color-dark);
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .menu-option input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #DDD;
+            border-radius: 10px;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1em;
+            transition: border 0.3s ease;
+        }
+
+        .menu-option input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 15px;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+            color: white;
+            box-shadow: 0 5px 20px rgba(255, 71, 87, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 71, 87, 0.6);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-next-player {
+            background: linear-gradient(90deg, #FF6B6B 0%, #FFA500 100%);
+            color: white;
+            font-size: 1.3em;
+            padding: 20px;
+            box-shadow: 0 6px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-next-player:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.6);
+        }
+
+        .btn-next-player:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-next-player:disabled:hover {
+            transform: none;
+            box-shadow: 0 6px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--color-light);
+            color: var(--color-dark);
+            border: 3px solid var(--color-dark);
+        }
+
+        .btn-secondary:hover {
+            background: var(--color-dark);
+            color: white;
+        }
+
+        .categories-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .category-item {
+            background: var(--color-light);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .category-item.active {
+            background: linear-gradient(135deg, var(--color-secondary) 0%, #26DE81 100%);
+            color: white;
+        }
+
+        .toggle-switch {
+            width: 50px;
+            height: 26px;
+            background: #CCC;
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(--color-primary);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: left 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            left: 27px;
+        }
+
+        .player-input {
+            margin-bottom: 10px;
+        }
+
+        .player-input input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #DDD;
+            border-radius: 10px;
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        .curtain-container {
+            position: relative;
+            height: 500px;
+            background: #2C3E50;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .curtain {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: linear-gradient(180deg, #8B0000 0%, #DC143C 100%);
+            cursor: pointer;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .curtain.open {
+            transform: translateY(-100%);
+        }
+
+        .curtain-handle {
+            width: 60px;
+            height: 6px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 3px;
+            margin-bottom: 10px;
+        }
+
+        .curtain-text {
+            color: white;
+            font-size: 1.2em;
+            font-weight: 600;
+            text-align: center;
+            opacity: 0.8;
+        }
+
+        .reveal-content {
+            text-align: center;
+            padding: 40px 20px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .role-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .role-icon.impostor {
+            background: var(--color-impostor);
+        }
+
+        .role-icon.inocente {
+            background: var(--color-inocente);
+        }
+
+        .role-badge {
+            font-family: 'Bowlby One', cursive;
+            font-size: 2.8em;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .role-impostor {
+            color: var(--color-impostor);
+        }
+
+        .role-inocente {
+            color: var(--color-inocente);
+        }
+
+        .word-display {
+            font-size: 2.2em;
+            font-weight: 700;
+            color: #1E272E;
+            background: white;
+            padding: 25px 40px;
+            border-radius: 15px;
+            margin-top: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            min-width: 200px;
+        }
+
+        .player-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .player-card {
+            background: var(--color-light);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+            position: relative;
+        }
+
+        .player-card:hover {
+            border-color: var(--color-primary);
+            transform: scale(1.05);
+        }
+
+        .player-card.eliminated {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #DDD;
+        }
+
+        .player-card.eliminated::after {
+            content: '❌';
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 1.5em;
+        }
+
+        .player-name {
+            font-weight: 600;
+            font-size: 1.1em;
+            color: var(--color-dark);
+        }
+
+        .result-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .result-modal.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .result-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+            animation: scaleIn 0.3s ease;
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .result-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        .result-text {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        .back-btn:hover {
+            background: white;
+            color: var(--color-primary);
+        }
+
+        .current-player-indicator {
+            background: var(--color-accent);
+            color: white;
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: 1.2em;
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .player-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Menú Principal -->
+        <div id="menuScreen" class="screen active">
+            <div class="header">
+                <h1>👤 EL IMPOSTOR</h1>
+            </div>
+            <div class="content">
+                <div class="menu-option">
+                    <label>Cantidad de Jugadores</label>
+                    <input type="number" id="numPlayers" min="3" max="20" value="4">
+                </div>
+
+                <div class="menu-option">
+                    <label>Cantidad de Impostores</label>
+                    <input type="number" id="numImpostors" min="1" max="10" value="1">
+                </div>
+
+                <button class="btn btn-secondary" onclick="showPlayersScreen()">
+                    Configurar Jugadores
+                </button>
+
+                <button class="btn btn-secondary" onclick="showCategoriesScreen()">
+                    Categorías
+                </button>
+
+                <button class="btn btn-primary" onclick="startGame()">
+                    🎮 Jugar
+                </button>
+            </div>
+        </div>
+
+        <!-- Configurar Jugadores -->
+        <div id="playersScreen" class="screen">
+            <div class="header">
+                <button class="back-btn" onclick="showScreen('menuScreen')">← Volver</button>
+                <h1>Nombres</h1>
+            </div>
+            <div class="content">
+                <div id="playersContainer"></div>
+                <button class="btn btn-primary" onclick="savePlayers()">
+                    Guardar
+                </button>
+            </div>
+        </div>
+
+        <!-- Categorías -->
+        <div id="categoriesScreen" class="screen">
+            <div class="header">
+                <button class="back-btn" onclick="showScreen('menuScreen')">← Volver</button>
+                <h1>Categorías</h1>
+            </div>
+            <div class="content">
+                <div id="categoriesContainer" class="categories-grid"></div>
+            </div>
+        </div>
+
+        <!-- Revelación -->
+        <div id="revealScreen" class="screen">
+            <div class="header">
+                <h1>Revelación</h1>
+            </div>
+            <div class="content">
+                <div class="current-player-indicator" id="currentPlayerName"></div>
+
+                <div class="curtain-container">
+                    <div class="curtain" id="curtain" onclick="toggleCurtain()">
+                        <div class="curtain-handle"></div>
+                        <div class="curtain-text">👆 Desliza hacia arriba</div>
+                    </div>
+
+                    <div class="reveal-content" id="revealContent"></div>
+                </div>
+
+                <button class="btn btn-next-player" id="nextPlayerBtn" onclick="nextPlayer()" disabled>
+                    SIGUIENTE JUGADOR →
+                </button>
+            </div>
+        </div>
+
+        <!-- Votación -->
+        <div id="votingScreen" class="screen">
+            <div class="header">
+                <h1>Votación</h1>
+            </div>
+            <div class="content">
+                <p style="text-align: center; margin-bottom: 20px; font-size: 1.1em;">
+                    ¿Quién es el impostor?
+                </p>
+                <div id="playersList" class="player-list"></div>
+                <button class="btn btn-secondary" onclick="resetGame()">
+                    Nueva Partida
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Resultado -->
+    <div id="resultModal" class="result-modal" onclick="closeResult()">
+        <div class="result-content" onclick="event.stopPropagation()">
+            <div class="result-icon" id="resultIcon"></div>
+            <div class="result-text" id="resultText"></div>
+            <button class="btn btn-primary" onclick="closeResult()">
+                Continuar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Base de datos de palabras
+        const palabrasDB = {
+            "animales y naturaleza": ["perro", "gato", "león", "tigre", "elefante", "jirafa", "cebra", "mono", "serpiente", "cocodrilo", "águila", "loro", "pingüino", "delfín", "ballena", "tiburón", "mariposa", "abeja", "hormiga", "araña", "rosa", "margarita", "girasol", "árbol", "palmera", "cactus", "montaña", "río", "océano", "volcán"],
+            "cosas": ["mesa", "silla", "lámpara", "reloj", "espejo", "cama", "almohada", "llave", "candado", "tijeras", "martillo", "destornillador", "paraguas", "mochila", "maleta", "botella", "vaso", "plato", "tenedor", "cuchara", "teléfono", "computadora", "televisor", "radio", "cámara", "batería", "enchufe", "cable", "libro", "cuaderno"],
+            "anime": ["Naruto", "Goku", "Luffy", "Pikachu", "Sasuke", "Vegeta", "Ichigo", "Light Yagami", "Edward Elric", "Saitama", "Eren Yeager", "Tanjiro", "Nezuko", "Todoroki", "Deku", "Bakugo", "Kakashi", "Itachi", "Zoro", "Sanji", "Dragon Ball", "One Piece", "Attack on Titan", "Death Note", "Demon Slayer", "My Hero Academia", "Bleach", "Hunter x Hunter"],
+            "cine y television": ["Titanic", "Avatar", "Star Wars", "Harry Potter", "Marvel", "Avengers", "Iron Man", "Spider-Man", "Batman", "Superman", "Stranger Things", "Breaking Bad", "Game of Thrones", "Friends", "The Office", "Squid Game", "La Casa de Papel", "Los Simpsons", "Toy Story", "Frozen", "El Rey León", "Shrek", "Jurassic Park", "Matrix", "Terminator", "Rambo", "Rocky", "Fast and Furious"],
+            "cuerpo y salud": ["corazón", "cerebro", "pulmón", "estómago", "hígado", "riñón", "ojo", "oído", "nariz", "boca", "brazo", "pierna", "mano", "pie", "dedo", "uña", "cabello", "piel", "hueso", "músculo", "aspirina", "vendaje", "termómetro", "estetoscopio", "jeringa", "pastilla", "vitamina", "antibiótico", "hospital", "médico"],
+            "deportes": ["fútbol", "básquetbol", "tenis", "voleibol", "rugby", "béisbol", "golf", "natación", "atletismo", "ciclismo", "boxeo", "karate", "judo", "taekwondo", "esgrima", "gimnasia", "skateboarding", "surf", "esquí", "snowboard", "Olimpiadas", "Mundial", "Copa", "medalla", "trofeo", "pelota", "red", "cancha", "estadio", "árbitro"],
+            "futbol": ["Messi", "Cristiano Ronaldo", "Neymar", "Mbappé", "Haaland", "Pelé", "Maradona", "Ronaldinho", "Zidane", "Beckham", "Barcelona", "Real Madrid", "Manchester United", "Bayern Munich", "PSG", "Juventus", "Liverpool", "Chelsea", "Milan", "Inter", "Champions League", "Copa del Mundo", "Balón de Oro", "penalti", "gol", "arquero", "defensa", "mediocampista", "delantero", "árbitro"],
+            "escuela": ["pizarra", "tiza", "borrador", "mochila", "cuaderno", "lápiz", "lapicera", "goma", "regla", "compás", "matemática", "lengua", "historia", "geografía", "biología", "química", "física", "educación física", "arte", "música", "maestro", "profesor", "director", "alumno", "clase", "recreo", "examen", "tarea", "diploma", "graduación"],
+            "fantasia": ["dragón", "unicornio", "hada", "elfo", "duende", "mago", "bruja", "vampiro", "hombre lobo", "zombie", "centauro", "pegaso", "fénix", "sirena", "minotauro", "troll", "ogro", "gárgola", "fantasma", "espíritu", "varita mágica", "poción", "hechizo", "castillo", "mazmorra", "espada", "escudo", "armadura", "corona", "caldero"],
+            "gente famosa": ["Michael Jackson", "Madonna", "Elvis Presley", "Beyoncé", "Taylor Swift", "Bad Bunny", "Shakira", "Rihanna", "Drake", "Ed Sheeran", "Tom Cruise", "Leonardo DiCaprio", "Brad Pitt", "Angelina Jolie", "Jennifer Lopez", "Will Smith", "Dwayne Johnson", "Robert Downey Jr", "Albert Einstein", "Steve Jobs", "Bill Gates", "Elon Musk", "Mark Zuckerberg", "Pablo Picasso", "Frida Kahlo", "Vincent van Gogh"],
+            "juegos": ["Minecraft", "Fortnite", "Among Us", "Roblox", "GTA", "FIFA", "Call of Duty", "Pokemon", "Mario Bros", "Zelda", "Sonic", "Pac-Man", "Tetris", "Candy Crush", "Clash Royale", "Clash of Clans", "Free Fire", "PUBG", "League of Legends", "Valorant", "ajedrez", "damas", "monopoly", "UNO", "póker", "dados", "dominó", "jenga", "twister", "Pictionary"],
+            "marcas": ["Nike", "Adidas", "Puma", "Reebok", "Apple", "Samsung", "Sony", "Microsoft", "Google", "Amazon", "Coca-Cola", "Pepsi", "McDonald's", "Burger King", "KFC", "Starbucks", "Subway", "Pizza Hut", "Domino's", "Nestlé", "Toyota", "Ford", "Ferrari", "BMW", "Mercedes-Benz", "Volkswagen", "Tesla", "Honda", "Chevrolet", "Audi"],
+            "moda y ropa": ["camisa", "pantalón", "vestido", "falda", "short", "remera", "buzo", "campera", "saco", "chaleco", "zapatillas", "zapatos", "botas", "sandalias", "ojotas", "medias", "bufanda", "gorro", "guantes", "cinturón", "Gucci", "Prada", "Versace", "Chanel", "Louis Vuitton", "Zara", "H&M", "Forever 21", "Mango", "Pull&Bear"],
+            "mundo y lugares": ["París", "Londres", "Nueva York", "Tokio", "Roma", "Madrid", "Barcelona", "Berlín", "Moscú", "Dubái", "Buenos Aires", "Río de Janeiro", "México", "Lima", "Santiago", "Bogotá", "Caracas", "La Habana", "Miami", "Los Ángeles", "Torre Eiffel", "Estatua de la Libertad", "Big Ben", "Coliseo", "Muralla China", "Taj Mahal", "Cristo Redentor", "Pirámides de Egipto"],
+            "musica": ["piano", "guitarra", "batería", "bajo", "violín", "flauta", "trompeta", "saxofón", "acordeón", "armónica", "rock", "pop", "jazz", "rap", "reggae", "salsa", "cumbia", "tango", "flamenco", "country", "canción", "melodía", "ritmo", "nota", "partitura", "concierto", "festival", "disco", "álbum", "micrófono"],
+            "trabajos y oficios": ["médico", "enfermero", "doctor", "cirujano", "dentista", "veterinario", "profesor", "maestro", "director", "psicólogo", "ingeniero", "arquitecto", "abogado", "juez", "policía", "bombero", "militar", "piloto", "azafata", "taxista", "chef", "cocinero", "camarero", "barista", "panadero", "pastelero", "carpintero", "plomero", "electricista", "mecánico"],
+            "transportes": ["auto", "camión", "colectivo", "taxi", "moto", "bicicleta", "monopatín", "patineta", "patines", "scooter", "avión", "helicóptero", "barco", "yate", "lancha", "submarino", "canoa", "kayak", "tren", "metro", "cohete", "transbordador", "globo aerostático", "paracaídas", "ambulancia", "patrullero", "camión de bomberos", "grúa", "tractor", "excavadora"]
+        };
+
+        // Estado del juego
+        let gameState = {
+            players: [],
+            categories: {},
+            currentPlayerIndex: 0,
+            gameData: null,
+            eliminatedPlayers: [],
+            curtainOpen: false
+        };
+
+        // Inicializar categorías
+        Object.keys(palabrasDB).forEach(cat => {
+            gameState.categories[cat] = true;
+        });
+
+        // Renderizar categorías
+        function renderCategories() {
+            const container = document.getElementById('categoriesContainer');
+            container.innerHTML = '';
+            
+            Object.keys(palabrasDB).forEach(category => {
+                const isActive = gameState.categories[category];
+                const div = document.createElement('div');
+                div.className = `category-item ${isActive ? 'active' : ''}`;
+                div.onclick = () => toggleCategory(category);
+                div.innerHTML = `
+                    <span>${category}</span>
+                    <div class="toggle-switch ${isActive ? 'active' : ''}"></div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function toggleCategory(category) {
+            gameState.categories[category] = !gameState.categories[category];
+            renderCategories();
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function showPlayersScreen() {
+            const numPlayers = parseInt(document.getElementById('numPlayers').value);
+            if (gameState.players.length !== numPlayers) {
+                gameState.players = Array(numPlayers).fill('').map((_, i) => `Jugador ${i + 1}`);
+            }
+            
+            const container = document.getElementById('playersContainer');
+            container.innerHTML = '';
+            
+            gameState.players.forEach((player, index) => {
+                const div = document.createElement('div');
+                div.className = 'player-input';
+                div.innerHTML = `
+                    <input type="text" 
+                           value="${player}" 
+                           placeholder="Jugador ${index + 1}"
+                           onchange="updatePlayerName(${index}, this.value)">
+                `;
+                container.appendChild(div);
+            });
+            
+            showScreen('playersScreen');
+        }
+
+        function updatePlayerName(index, name) {
+            gameState.players[index] = name || `Jugador ${index + 1}`;
+        }
+
+        function savePlayers() {
+            showScreen('menuScreen');
+        }
+
+        function showCategoriesScreen() {
+            renderCategories();
+            showScreen('categoriesScreen');
+        }
+
+        function startGame() {
+            const numPlayers = parseInt(document.getElementById('numPlayers').value);
+            const numImpostors = parseInt(document.getElementById('numImpostors').value);
+            
+            if (gameState.players.length !== numPlayers) {
+                gameState.players = Array(numPlayers).fill('').map((_, i) => `Jugador ${i + 1}`);
+            }
+            
+            const activeCategories = Object.keys(gameState.categories).filter(cat => gameState.categories[cat]);
+            
+            if (activeCategories.length === 0) {
+                alert('Debes activar al menos una categoría');
+                return;
+            }
+
+            const allWords = activeCategories.flatMap(cat => palabrasDB[cat]);
+            const selectedWord = allWords[Math.floor(Math.random() * allWords.length)];
+            
+            const impostorIndices = [];
+            while (impostorIndices.length < numImpostors) {
+                const randomIndex = Math.floor(Math.random() * gameState.players.length);
+                if (!impostorIndices.includes(randomIndex)) {
+                    impostorIndices.push(randomIndex);
+                }
+            }
+
+            const startPlayerIndex = Math.floor(Math.random() * gameState.players.length);
+            
+            gameState.gameData = {
+                word: selectedWord,
+                impostors: impostorIndices,
+                startIndex: startPlayerIndex
+            };
+            gameState.currentPlayerIndex = startPlayerIndex;
+            gameState.eliminatedPlayers = [];
+            gameState.curtainOpen = false;
+            
+            showRevealScreen();
+        }
+
+        function showRevealScreen() {
+            document.getElementById('currentPlayerName').textContent = 
+                `Turno de: ${gameState.players[gameState.currentPlayerIndex]}`;
+            
+            const isImpostor = gameState.gameData.impostors.includes(gameState.currentPlayerIndex);
+            const revealContent = document.getElementById('revealContent');
+            
+            if (isImpostor) {
+                revealContent.innerHTML = `
+                    <div class="role-icon impostor">🔪</div>
+                    <div class="role-badge role-impostor">IMPOSTOR</div>
+                `;
+            } else {
+                revealContent.innerHTML = `
+                    <div class="role-icon inocente">✓</div>
+                    <div class="role-badge role-inocente">INOCENTE</div>
+                    <div class="word-display">${gameState.gameData.word}</div>
+                `;
+            }
+            
+            document.getElementById('curtain').classList.remove('open');
+            document.getElementById('nextPlayerBtn').disabled = true;
+            gameState.curtainOpen = false;
+            showScreen('revealScreen');
+        }
+
+        function toggleCurtain() {
+            gameState.curtainOpen = !gameState.curtainOpen;
+            const curtain = document.getElementById('curtain');
+            const nextBtn = document.getElementById('nextPlayerBtn');
+            
+            if (gameState.curtainOpen) {
+                curtain.classList.add('open');
+                nextBtn.disabled = false;
+            } else {
+                curtain.classList.remove('open');
+                nextBtn.disabled = true;
+            }
+        }
+
+        function getOrderedPlayers() {
+            const ordered = [];
+            for (let i = 0; i < gameState.players.length; i++) {
+                const index = (gameState.gameData.startIndex + i) % gameState.players.length;
+                ordered.push({ name: gameState.players[index], originalIndex: index });
+            }
+            return ordered;
+        }
+
+        function nextPlayer() {
+            // Cerrar la cortina primero
+            gameState.curtainOpen = false;
+            document.getElementById('curtain').classList.remove('open');
+            
+            const orderedPlayers = getOrderedPlayers();
+            const currentOrder = orderedPlayers.findIndex(p => p.originalIndex === gameState.currentPlayerIndex);
+            
+            if (currentOrder < orderedPlayers.length - 1) {
+                setTimeout(() => {
+                    gameState.currentPlayerIndex = orderedPlayers[currentOrder + 1].originalIndex;
+                    showRevealScreen();
+                }, 500);
+            } else {
+                setTimeout(() => {
+                    showVotingScreen();
+                }, 500);
+            }
+        }
+
+        function showVotingScreen() {
+            const playersList = document.getElementById('playersList');
+            playersList.innerHTML = '';
+            
+            gameState.players.forEach((player, index) => {
+                const div = document.createElement('div');
+                div.className = `player-card ${gameState.eliminatedPlayers.includes(index) ? 'eliminated' : ''}`;
+                div.onclick = () => eliminatePlayer(index);
+                div.innerHTML = `<div class="player-name">${player}</div>`;
+                playersList.appendChild(div);
+            });
+            
+            showScreen('votingScreen');
+        }
+
+        function eliminatePlayer(index) {
+            if (gameState.eliminatedPlayers.includes(index)) return;
+            
+            const isImpostor = gameState.gameData.impostors.includes(index);
+            gameState.eliminatedPlayers.push(index);
+            
+            document.getElementById('resultIcon').textContent = isImpostor ? '🔪' : '✅';
+            document.getElementById('resultText').textContent = 
+                `${gameState.players[index]} era ${isImpostor ? 'IMPOSTOR' : 'INOCENTE'}`;
+            document.getElementById('resultModal').classList.add('show');
+            
+            showVotingScreen();
+        }
+
+        function closeResult() {
+            document.getElementById('resultModal').classList.remove('show');
+            
+            const allImpostorsEliminated = gameState.gameData.impostors.every(i => 
+                gameState.eliminatedPlayers.includes(i));
+            
+            if (allImpostorsEliminated) {
+                setTimeout(() => {
+                    alert('¡Los inocentes ganaron! Todos los impostores fueron eliminados.');
+                }, 300);
+            }
+        }
+
+        function resetGame() {
+            gameState.currentPlayerIndex = 0;
+            gameState.gameData = null;
+            gameState.eliminatedPlayers = [];
+            gameState.curtainOpen = false;
+            showScreen('menuScreen');
+        }
+
+        // Registrar Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('Service Worker registrado'))
+                    .catch(err => console.log('Error al registrar Service Worker:', err));
+            });
+        }
+
+        // Mostrar prompt de instalación
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Mostrar un mensaje al usuario después de 3 segundos
+            setTimeout(() => {
+                if (deferredPrompt && window.confirm('¿Querés instalar El Impostor como aplicación en tu dispositivo?')) {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        deferredPrompt = null;
+                    });
+                }
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
