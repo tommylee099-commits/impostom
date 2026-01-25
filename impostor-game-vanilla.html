@@ -509,6 +509,50 @@
             font-size: 1.2em;
         }
 
+        .hint-option {
+            background: var(--color-light);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .hint-checkbox {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .hint-label {
+            flex: 1;
+            font-weight: 600;
+            color: var(--color-dark);
+            font-size: 1.1em;
+        }
+
+        .hint-number-input {
+            width: 80px;
+            padding: 10px;
+            border: 2px solid #DDD;
+            border-radius: 10px;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1em;
+            text-align: center;
+        }
+
+        .hint-display {
+            background: #FFF3CD;
+            color: #856404;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            font-weight: 600;
+            font-size: 1.1em;
+            border: 2px solid #FFC107;
+        }
+
         @media (max-width: 480px) {
             .header h1 {
                 font-size: 2em;
@@ -536,6 +580,12 @@
                 <div class="menu-option">
                     <label>Cantidad de Impostores</label>
                     <input type="number" id="numImpostors" min="1" max="10" value="1">
+                </div>
+
+                <div class="hint-option">
+                    <input type="checkbox" id="hintEnabled" class="hint-checkbox">
+                    <label for="hintEnabled" class="hint-label">Pista para impostor</label>
+                    <input type="number" id="hintCategories" class="hint-number-input" min="1" max="5" value="1" disabled>
                 </div>
 
                 <button class="btn btn-secondary" onclick="showPlayersScreen()">
@@ -665,6 +715,16 @@
             gameState.categories[cat] = true;
         });
 
+        // Manejar checkbox de pistas
+        document.addEventListener('DOMContentLoaded', () => {
+            const hintCheckbox = document.getElementById('hintEnabled');
+            const hintInput = document.getElementById('hintCategories');
+            
+            hintCheckbox.addEventListener('change', (e) => {
+                hintInput.disabled = !e.target.checked;
+            });
+        });
+
         // Renderizar categorías
         function renderCategories() {
             const container = document.getElementById('categoriesContainer');
@@ -733,6 +793,8 @@
         function startGame() {
             const numPlayers = parseInt(document.getElementById('numPlayers').value);
             const numImpostors = parseInt(document.getElementById('numImpostors').value);
+            const hintEnabled = document.getElementById('hintEnabled').checked;
+            const hintCategories = parseInt(document.getElementById('hintCategories').value);
             
             if (gameState.players.length !== numPlayers) {
                 gameState.players = Array(numPlayers).fill('').map((_, i) => `Jugador ${i + 1}`);
@@ -745,8 +807,42 @@
                 return;
             }
 
+            // Seleccionar palabra y encontrar su categoría
             const allWords = activeCategories.flatMap(cat => palabrasDB[cat]);
             const selectedWord = allWords[Math.floor(Math.random() * allWords.length)];
+            
+            // Encontrar a qué categoría pertenece la palabra
+            let wordCategory = null;
+            for (const cat of activeCategories) {
+                if (palabrasDB[cat].includes(selectedWord)) {
+                    wordCategory = cat;
+                    break;
+                }
+            }
+
+            // Generar pista si está habilitada
+            let hint = null;
+            if (hintEnabled && wordCategory) {
+                const numCategoriesToShow = Math.min(hintCategories, activeCategories.length);
+                const hintCategoriesList = [wordCategory];
+                
+                // Agregar categorías aleatorias adicionales
+                const otherCategories = activeCategories.filter(cat => cat !== wordCategory);
+                while (hintCategoriesList.length < numCategoriesToShow && otherCategories.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * otherCategories.length);
+                    hintCategoriesList.push(otherCategories[randomIndex]);
+                    otherCategories.splice(randomIndex, 1);
+                }
+                
+                // Mezclar las categorías
+                hintCategoriesList.sort(() => Math.random() - 0.5);
+                
+                if (numCategoriesToShow === 1) {
+                    hint = `Categoría: ${hintCategoriesList[0]}`;
+                } else {
+                    hint = `La palabra está entre: ${hintCategoriesList.join(', ')}`;
+                }
+            }
             
             const impostorIndices = [];
             while (impostorIndices.length < numImpostors) {
@@ -761,7 +857,8 @@
             gameState.gameData = {
                 word: selectedWord,
                 impostors: impostorIndices,
-                startIndex: startPlayerIndex
+                startIndex: startPlayerIndex,
+                hint: hint
             };
             gameState.currentPlayerIndex = startPlayerIndex;
             gameState.eliminatedPlayers = [];
@@ -778,10 +875,21 @@
             const revealContent = document.getElementById('revealContent');
             
             if (isImpostor) {
-                revealContent.innerHTML = `
+                let impostorHTML = `
                     <div class="role-icon impostor">🔪</div>
                     <div class="role-badge role-impostor">IMPOSTOR</div>
                 `;
+                
+                // Agregar pista si existe
+                if (gameState.gameData.hint) {
+                    impostorHTML += `
+                        <div class="hint-display">
+                            💡 ${gameState.gameData.hint}
+                        </div>
+                    `;
+                }
+                
+                revealContent.innerHTML = impostorHTML;
             } else {
                 revealContent.innerHTML = `
                     <div class="role-icon inocente">✓</div>
@@ -793,6 +901,18 @@
             document.getElementById('curtain').classList.remove('open');
             document.getElementById('nextPlayerBtn').disabled = true;
             gameState.curtainOpen = false;
+            
+            // Cambiar texto del botón si es el último jugador
+            const orderedPlayers = getOrderedPlayers();
+            const currentOrder = orderedPlayers.findIndex(p => p.originalIndex === gameState.currentPlayerIndex);
+            const nextBtn = document.getElementById('nextPlayerBtn');
+            
+            if (currentOrder === orderedPlayers.length - 1) {
+                nextBtn.textContent = 'EMPEZAR JUEGO 🎮';
+            } else {
+                nextBtn.textContent = 'SIGUIENTE JUGADOR →';
+            }
+            
             showScreen('revealScreen');
         }
 
