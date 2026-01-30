@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="theme-color" content="#667EEA">
     <meta name="description" content="Juego del Impostor - Encuentra al impostor entre los jugadores">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1192,12 +1195,42 @@
             }
         }
 
-        // Registrar Service Worker para PWA
+        // Registrar Service Worker para PWA con auto-actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('service-worker.js')
-                    .then(reg => console.log('Service Worker registrado'))
+                    .then(reg => {
+                        console.log('Service Worker registrado');
+                        
+                        // Verificar actualizaciones cada 60 segundos
+                        setInterval(() => {
+                            reg.update();
+                        }, 60000);
+                        
+                        // Detectar cuando hay un nuevo service worker esperando
+                        reg.addEventListener('updatefound', () => {
+                            const newWorker = reg.installing;
+                            
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Hay una nueva versión disponible
+                                    console.log('Nueva versión disponible, recargando...');
+                                    
+                                    // Recargar la página automáticamente después de 1 segundo
+                                    setTimeout(() => {
+                                        window.location.reload();
+                                    }, 1000);
+                                }
+                            });
+                        });
+                    })
                     .catch(err => console.log('Error al registrar Service Worker:', err));
+                
+                // Listener para cuando el service worker toma control
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    console.log('Nuevo service worker activo, recargando página...');
+                    window.location.reload();
+                });
             });
         }
 
