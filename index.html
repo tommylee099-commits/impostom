@@ -289,6 +289,33 @@
             justify-content: center;
         }
 
+        .impostor-video-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .impostor-video-bg.active {
+            opacity: 0.6;
+        }
+
+        .impostor-video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,71,87,0.3) 0%, rgba(0,0,0,0.7) 100%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
         .curtain {
             position: absolute;
             top: 0;
@@ -298,7 +325,7 @@
             background: linear-gradient(180deg, #8B0000 0%, #DC143C 100%);
             cursor: pointer;
             transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 10;
+            z-index: 20;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -337,6 +364,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            z-index: 10;
         }
 
         .role-icon {
@@ -381,9 +409,19 @@
             background: white;
             padding: 25px 40px;
             border-radius: 15px;
-            margin-top: 10px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
             min-width: 200px;
+        }
+
+        .word-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 15;
+            width: 90%;
+            display: flex;
+            justify-content: center;
         }
 
         .player-list {
@@ -498,6 +536,39 @@
             color: var(--color-primary);
         }
 
+        .restart-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.8em;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(255, 71, 87, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: none;
+        }
+
+        .restart-btn.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.1) rotate(180deg);
+            box-shadow: 0 8px 25px rgba(255, 71, 87, 0.6);
+        }
+
+        .restart-btn:active {
+            transform: scale(1);
+        }
+
         .current-player-indicator {
             background: var(--color-accent);
             color: white;
@@ -547,10 +618,20 @@
             color: #856404;
             padding: 15px 20px;
             border-radius: 12px;
-            margin-top: 20px;
             font-weight: 600;
             font-size: 1.1em;
             border: 2px solid #FFC107;
+        }
+
+        .hint-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 15;
+            width: 90%;
+            display: flex;
+            justify-content: center;
         }
 
         @media (max-width: 480px) {
@@ -569,7 +650,7 @@
         <!-- Menú Principal -->
         <div id="menuScreen" class="screen active">
             <div class="header">
-                <h1>👤 EL IMPOSTOR</h1>
+                <h1>👤 IMPOSTOM</h1>
             </div>
             <div class="content">
                 <div class="menu-option">
@@ -586,6 +667,11 @@
                     <input type="checkbox" id="hintEnabled" class="hint-checkbox">
                     <label for="hintEnabled" class="hint-label">Pista para impostor</label>
                     <input type="number" id="hintCategories" class="hint-number-input" min="1" max="5" value="1" disabled>
+                </div>
+
+                <div class="hint-option">
+                    <input type="checkbox" id="customVideosEnabled" class="hint-checkbox">
+                    <label for="customVideosEnabled" class="hint-label">Usar videos personalizados</label>
                 </div>
 
                 <button class="btn btn-secondary" onclick="showPlayersScreen()">
@@ -636,12 +722,23 @@
                 <div class="current-player-indicator" id="currentPlayerName"></div>
 
                 <div class="curtain-container">
+                    <video id="impostorVideo" class="impostor-video-bg" loop muted playsinline>
+                        <source src="impostom.mp4" type="video/mp4">
+                    </video>
+                    <video id="inocenteVideo" class="impostor-video-bg" loop muted playsinline>
+                        <source src="inocente.mp4" type="video/mp4">
+                    </video>
+                    <div class="impostor-video-overlay"></div>
+                    
                     <div class="curtain" id="curtain" onclick="toggleCurtain()">
                         <div class="curtain-handle"></div>
                         <div class="curtain-text">👆 Desliza hacia arriba</div>
                     </div>
 
                     <div class="reveal-content" id="revealContent"></div>
+                    
+                    <!-- Contenedor para palabras y pistas abajo -->
+                    <div id="bottomContent"></div>
                 </div>
 
                 <button class="btn btn-next-player" id="nextPlayerBtn" onclick="nextPlayer()" disabled>
@@ -666,6 +763,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Botón flotante de reinicio -->
+    <button id="restartBtn" class="restart-btn" onclick="confirmRestart()" title="Reiniciar partida">
+        🔄
+    </button>
 
     <!-- Modal de Resultado -->
     <div id="resultModal" class="result-modal" onclick="closeResult()">
@@ -751,6 +853,14 @@
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
+            
+            // Mostrar botón de reinicio solo durante el juego
+            const restartBtn = document.getElementById('restartBtn');
+            if (screenId === 'revealScreen' || screenId === 'votingScreen') {
+                restartBtn.classList.add('show');
+            } else {
+                restartBtn.classList.remove('show');
+            }
         }
 
         function showPlayersScreen() {
@@ -795,6 +905,7 @@
             const numImpostors = parseInt(document.getElementById('numImpostors').value);
             const hintEnabled = document.getElementById('hintEnabled').checked;
             const hintCategories = parseInt(document.getElementById('hintCategories').value);
+            const customVideosEnabled = document.getElementById('customVideosEnabled').checked;
             
             if (gameState.players.length !== numPlayers) {
                 gameState.players = Array(numPlayers).fill('').map((_, i) => `Jugador ${i + 1}`);
@@ -858,7 +969,8 @@
                 word: selectedWord,
                 impostors: impostorIndices,
                 startIndex: startPlayerIndex,
-                hint: hint
+                hint: hint,
+                customVideosEnabled: customVideosEnabled
             };
             gameState.currentPlayerIndex = startPlayerIndex;
             gameState.eliminatedPlayers = [];
@@ -873,29 +985,73 @@
             
             const isImpostor = gameState.gameData.impostors.includes(gameState.currentPlayerIndex);
             const revealContent = document.getElementById('revealContent');
+            const bottomContent = document.getElementById('bottomContent');
+            const impostorVideo = document.getElementById('impostorVideo');
+            const inocenteVideo = document.getElementById('inocenteVideo');
+            const useCustomVideos = gameState.gameData.customVideosEnabled;
+            
+            // Pausar ambos videos primero
+            impostorVideo.classList.remove('active');
+            impostorVideo.pause();
+            inocenteVideo.classList.remove('active');
+            inocenteVideo.pause();
+            
+            // Limpiar contenedores
+            revealContent.innerHTML = '';
+            bottomContent.innerHTML = '';
             
             if (isImpostor) {
-                let impostorHTML = `
-                    <div class="role-icon impostor">🔪</div>
-                    <div class="role-badge role-impostor">IMPOSTOR</div>
-                `;
-                
-                // Agregar pista si existe
-                if (gameState.gameData.hint) {
-                    impostorHTML += `
-                        <div class="hint-display">
-                            💡 ${gameState.gameData.hint}
+                // Activar video de impostor si está habilitado
+                if (useCustomVideos) {
+                    impostorVideo.classList.add('active');
+                    impostorVideo.play().catch(e => console.log('Error al reproducir video:', e));
+                    
+                    // Pista abajo si existe
+                    if (gameState.gameData.hint) {
+                        bottomContent.innerHTML = `
+                            <div class="hint-container">
+                                <div class="hint-display">
+                                    💡 ${gameState.gameData.hint}
+                                </div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    // Modo sin videos: mostrar todo en el centro
+                    let impostorHTML = `
+                        <div class="role-icon impostor">🔪</div>
+                        <div class="role-badge role-impostor">IMPOSTOR</div>
+                    `;
+                    
+                    if (gameState.gameData.hint) {
+                        impostorHTML += `
+                            <div class="hint-display">
+                                💡 ${gameState.gameData.hint}
+                            </div>
+                        `;
+                    }
+                    revealContent.innerHTML = impostorHTML;
+                }
+            } else {
+                // Activar video de inocente si está habilitado
+                if (useCustomVideos) {
+                    inocenteVideo.classList.add('active');
+                    inocenteVideo.play().catch(e => console.log('Error al reproducir video:', e));
+                    
+                    // Palabra abajo
+                    bottomContent.innerHTML = `
+                        <div class="word-container">
+                            <div class="word-display">${gameState.gameData.word}</div>
                         </div>
                     `;
+                } else {
+                    // Modo sin videos: mostrar todo en el centro
+                    revealContent.innerHTML = `
+                        <div class="role-icon inocente">✓</div>
+                        <div class="role-badge role-inocente">INOCENTE</div>
+                        <div class="word-display">${gameState.gameData.word}</div>
+                    `;
                 }
-                
-                revealContent.innerHTML = impostorHTML;
-            } else {
-                revealContent.innerHTML = `
-                    <div class="role-icon inocente">✓</div>
-                    <div class="role-badge role-inocente">INOCENTE</div>
-                    <div class="word-display">${gameState.gameData.word}</div>
-                `;
             }
             
             document.getElementById('curtain').classList.remove('open');
@@ -943,6 +1099,14 @@
             // Cerrar la cortina primero
             gameState.curtainOpen = false;
             document.getElementById('curtain').classList.remove('open');
+            
+            // Pausar y ocultar ambos videos
+            const impostorVideo = document.getElementById('impostorVideo');
+            const inocenteVideo = document.getElementById('inocenteVideo');
+            impostorVideo.classList.remove('active');
+            impostorVideo.pause();
+            inocenteVideo.classList.remove('active');
+            inocenteVideo.pause();
             
             const orderedPlayers = getOrderedPlayers();
             const currentOrder = orderedPlayers.findIndex(p => p.originalIndex === gameState.currentPlayerIndex);
@@ -1006,7 +1170,26 @@
             gameState.gameData = null;
             gameState.eliminatedPlayers = [];
             gameState.curtainOpen = false;
+            
+            // Pausar y ocultar ambos videos
+            const impostorVideo = document.getElementById('impostorVideo');
+            const inocenteVideo = document.getElementById('inocenteVideo');
+            if (impostorVideo) {
+                impostorVideo.classList.remove('active');
+                impostorVideo.pause();
+            }
+            if (inocenteVideo) {
+                inocenteVideo.classList.remove('active');
+                inocenteVideo.pause();
+            }
+            
             showScreen('menuScreen');
+        }
+
+        function confirmRestart() {
+            if (confirm('¿Estás seguro que querés reiniciar la partida? Se perderá el progreso actual.')) {
+                resetGame();
+            }
         }
 
         // Registrar Service Worker para PWA
